@@ -5,22 +5,25 @@ const timestamp = require('unix-timestamp')
 timestamp.round = true
 
 const connection = {
+    port: '8888',
     exclusive: true
 }
 
 var clients = []
 
 function find(array, type, searchFor){
+    var result
     var find = array.some(element => {
         //console.log(element)       
             if(element[type] == searchFor[type]) {
                 console.log('found ' + type + ':', element.name, element.uuid)
+                result = element
                 return element;
             }
         });
 
         if(find) {
-            return find;
+            return result;
         } else {
             return false
         }
@@ -28,10 +31,12 @@ function find(array, type, searchFor){
 
 
 const server = new net.createServer((socket) => {
+    var client = {}
+
+
     socket.setEncoding()
     console.log('Client connected!')
-    //socket.write('Hello World')
-    //clients.push(socket)
+
     server.getConnections((err, count) => {
         console.log('Connections:', err, count)
     })
@@ -48,7 +53,7 @@ const server = new net.createServer((socket) => {
                 console.log(payload.data)
                 var isNameValid = !find(clients, 'name', payload.data)
                 if(isNameValid) {
-                    var client = {
+                    client = {
                         uuid: uuid(),
                         name: payload.data.name,
                         socket: socket
@@ -90,8 +95,17 @@ const server = new net.createServer((socket) => {
     })
 
     socket.on('end', () => {
-        console.log('Socket end')
-        var client = !find(clients, 'socket', socket)
+        console.log('User disconnected:', client.name)
+        const endclient = find(clients, 'uuid', client)
+        //console.log('Close client:', client)
+        if(endclient != false) {
+            const index = clients.indexOf(endclient)
+            console.log('Index',index)
+            clients.splice(index)
+        }
+        server.getConnections((err, count) => {
+            console.log('Connections:', err, count)
+        })
 
     })
 
@@ -104,7 +118,7 @@ server.on('error', (e) => {
         console.log(e)
     }
 })
-server.listen( () => {
+server.listen(connection, () => {
     const address = server.address()
     bonjour.publish({ name: 'Code chat server', type: 'tcp', port: address.port, txt: {service: 'cpp'} })
     console.log('Server listening on:', address)

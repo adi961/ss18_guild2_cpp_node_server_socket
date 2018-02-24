@@ -28,6 +28,17 @@ function find(array, type, searchFor){
             return false
         }
 }
+//experimental
+function userMsg(action, name) {
+    const message = {
+        type: 'servermsg',
+        event: action,
+        data: {
+            name: name
+        }
+    }
+    return message
+}
 
 
 const server = new net.createServer((socket) => {
@@ -62,6 +73,10 @@ const server = new net.createServer((socket) => {
                     clients.push(client)
                     console.log('add user:', client.name, client.uuid)
                     socket.write(JSON.stringify({type: 'uuid', data: {uuid: client.uuid}}))
+                    setTimeout(() => {
+                        boradcast(JSON.stringify(userMsg('join', payload.data.name)),false)
+                    },10)
+                    
                 } else {
                     socket.write(JSON.stringify({type: 'error', data: { key: '-1', message: 'User already taken'}}))
                     console.log('User already token:', payload.data)
@@ -69,7 +84,6 @@ const server = new net.createServer((socket) => {
             
             }
             
-            //socket.write(data)
         } else if(payload.type == 'message') {
             const user = find(clients, 'uuid', payload.data)
             if(payload.data.content.length < 65935 && user) {
@@ -88,13 +102,14 @@ const server = new net.createServer((socket) => {
                 }
                 
 
-                boradcast(JSON.stringify(message))
+                boradcast(JSON.stringify(message), true)
             }
         }
         //boradcast(data, socket)
     })
 
     socket.on('end', () => {
+        
         console.log('User disconnected:', client.name)
         const endclient = find(clients, 'uuid', client)
         //console.log('Close client:', client)
@@ -102,6 +117,7 @@ const server = new net.createServer((socket) => {
             const index = clients.indexOf(endclient)
             console.log('Index',index)
             clients.splice(index)
+            boradcast(JSON.stringify(userMsg('leave', client.name)),socket, true)
         }
         server.getConnections((err, count) => {
             console.log('Connections:', err, count)
@@ -124,10 +140,12 @@ server.listen(connection, () => {
     console.log('Server listening on:', address)
 })
 
-function boradcast(data) {
+function boradcast(data, sender, toMe) {
+    console.log('Broadcasting data:', data)
     clients.forEach(client => {
         var socket = client.socket
-        //if (sender === socket) return
+        
+        if (sender === socket && toMe == false) return
         socket.write(data)
         //console.log("Write to scoket")
     });

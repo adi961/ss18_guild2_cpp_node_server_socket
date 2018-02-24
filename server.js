@@ -84,7 +84,6 @@ const server = new net.createServer((socket) => {
             
             }
             
-            //socket.write(data)
         } else if(payload.type == 'message') {
             const user = find(clients, 'uuid', payload.data)
             if(payload.data.content.length < 65935 && user) {
